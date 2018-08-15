@@ -9,7 +9,7 @@ var htmlFormatter = require('eslint/lib/formatters/html')
 var pathToMockServerDir = require('./config/PATHS').MOCK
 var pathToMockServerApp = pathToMockServerDir.join('app.js')
 var matchMockServerFiles = new RegExp(
-  pathToMockServerDir.replace(/\\/g, '\\\\') // for Windows compatible
+  pathToMockServerDir.replace(/\\/g, '\\\\') // for Windows compatibility
 )
 
 /**
@@ -47,9 +47,7 @@ function createLintFailureServer (errInfo) {
 // (thanks to https://github.com/expressjs/express/issues/2596#issuecomment-81353034)
 var mockServer
 
-var watcher = chokidar.watch(pathToMockServerDir)
-
-var reloadMockServer = debounce(function () {
+function freshLoadMockServer () {
   var errInfo = lintMockServerFiles()
   if (errInfo) {
     mockServer = createLintFailureServer(errInfo)
@@ -59,12 +57,21 @@ var reloadMockServer = debounce(function () {
   clearModule.match(matchMockServerFiles)
   mockServer = require(pathToMockServerApp).default
   console.info('Mock server fresh loaded')
-}, 1000, true)
+}
+freshLoadMockServer()
 
-'add addDir change unlink unlinkDir'.split(' ').forEach(function (event) {
-  watcher.on(event, reloadMockServer)
+var fileWatcher = chokidar.watch(pathToMockServerDir, {
+  ignored: [
+    pathToMockServerDir.join('upload'),
+    pathToMockServerDir.join('.eslintcache')
+  ]
+}).on('ready', function () {
+  fileWatcher.on('all', debounce(freshLoadMockServer, 500))
 })
 
+/**
+ * Integrate with dev server
+ */
 module.exports = function (devServer) {
   devServer.use(function (req, res, next) {
     mockServer(req, res, next)
