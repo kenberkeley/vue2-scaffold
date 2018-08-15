@@ -58,6 +58,7 @@ module.exports = {
     }].concat(styleRules.basic)
   },
   plugins: [
+    new NyanProgressPlugin(),
     new webpack.DefinePlugin(ENV),
     new webpack.optimize.CommonsChunkPlugin({
       name: 'vendor',
@@ -69,9 +70,5 @@ module.exports = {
       filename: 'index.html',
       template: PATHS.SRC.join('index.html')
     })
-  ].concat(
-    ENV.__DEV__
-      ? new NyanProgressPlugin() // 开发环境：显示编译进度条
-      : [] // 生产环境：线上编译，此时应避免过多的日志打印
-  )
+  ]
 }
